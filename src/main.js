@@ -12,23 +12,21 @@ class CreditCard{
             path01: document.querySelector(".cc-bg svg > g g:nth-child(1) path"),
             path02: document.querySelector(".cc-bg svg > g g:nth-child(2) path")
         };
-
-        this.flagLogo = document.querySelector(".cc-logo span:nth-child(2) img");
-    }
-  
-    setCardType(type){
-        this.creditCardfills.path01.setAttribute("fill", this.colors[type][0]);
-        this.creditCardfills.path02.setAttribute("fill", this.colors[type][1]);
-        this.flagLogo.setAttribute("src", `cc-${type}.svg`);
-    }
-}
-
-class MaskCreditCard{
-    constructor(){
+        this.flagLogoElement = document.querySelector(".cc-logo span:nth-child(2) img");
+        this.visaRegex = /^4\d{0,15}/;
+        this.mastercardRegex = /(^5[1-5]\d{0,2}|^22[2-9]\d|^2[3-7]\d{0,2})\d{0,12}/;
         this.securityCodeElement = document.querySelector("#security-code");
         this.expirationDateElement = document.querySelector("#expiration-date");
+        this.cardNumberElement = document.querySelector("#card-number");
         this.securityCodeMasked;
-        this.expirationDateMasked;        
+        this.expirationDateMasked;
+        this.cardNumberMasked;
+    }
+  
+    setUpLayout(type){
+        this.creditCardfills.path01.setAttribute("fill", this.colors[type][0]);
+        this.creditCardfills.path02.setAttribute("fill", this.colors[type][1]);
+        this.flagLogoElement.setAttribute("src", `cc-${type}.svg`);
     }
 
     setSecurityCodeMask(mask){
@@ -57,12 +55,47 @@ class MaskCreditCard{
         this.expirationDateMasked = Imask(this.expirationDateElement, expirationDatePattern);
     }
 
+    setCardNumberMask(defaultMask){
+        const cardNumberPattern = {
+            mask: [
+                {
+                    mask: defaultMask,
+                    regex: this.visaRegex,
+                    cardType: "visa"
+                },
+                {
+                    mask: defaultMask,
+                    regex: this.mastercardRegex,
+                    cardType: "mastercard"
+                },
+                {
+                    mask: defaultMask,
+                    cardType: "default"
+                }
+            ],
+            dispatch: function(appended, dynamicMasked){
+                const number = (dynamicMasked.value + appended).replace(/\D/g, "");
+                const foundMask = dynamicMasked.compiledMasks.find(item =>{
+                    return number.match(item.regex)
+                })
+                return foundMask;
+            }
+        }
+
+        this.cardNumberMasked = Imask(this.cardNumberElement, cardNumberPattern);
+    }
 
 }
 
 const creditCard = new CreditCard();
-creditCard.setCardType("mastercard");
+creditCard.setUpLayout("mastercard");
+creditCard.setSecurityCodeMask("0000");
+creditCard.setExpirationDateMask("MM{/}YY");
+creditCard.setCardNumberMask("0000 0000 0000 0000");
 
-const maskCreditCard = new MaskCreditCard();
-maskCreditCard.setSecurityCodeMask("0000");
-maskCreditCard.setExpirationDateMask("MM{/}YY");
+console.log(creditCard.cardNumberMasked.masked.currentMask.cardType + ", " + creditCard.cardNumberMasked.masked.currentMask._value);
+
+console.log(creditCard.cardNumberMasked);
+
+// Visa: /^4\d{0,15}/
+// Mastercard: /(^5[1-5]\d{0,2}|^22[2-9]\d|^2[3-7]\d{0,2})\d{0,12}/
