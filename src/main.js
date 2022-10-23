@@ -1,6 +1,10 @@
 import "./css/index.css"
 import Imask from "imask"
 
+document.querySelector("form", (event)=>{
+    event.preventDefaut();
+})
+
 class CreditCard{
     constructor(){
         this.colors = {
@@ -8,30 +12,32 @@ class CreditCard{
             mastercard: ["#DF6F29", "#C69347"],
             default: ["black", "gray"]
         };
-        this.creditCardfills = {
-            path01: document.querySelector(".cc-bg svg > g g:nth-child(1) path"),
-            path02: document.querySelector(".cc-bg svg > g g:nth-child(2) path")
-        };
-        this.flagLogoElement = document.querySelector(".cc-logo span:nth-child(2) img");
         this.visaRegex = /^4\d{0,15}/;
         this.mastercardRegex = /(^5[1-5]\d{0,2}|^22[2-9]\d|^2[3-7]\d{0,2})\d{0,12}/;
-        this.securityCodeElement = document.querySelector("#security-code");
-        this.expirationDateElement = document.querySelector("#expiration-date");
+        this.cardSecurityCodeElement = document.querySelector("#security-code");
+        this.cardExpirationDateElement = document.querySelector("#expiration-date");
         this.cardNumberElement = document.querySelector("#card-number");
-        this.securityCodeMasked;
-        this.expirationDateMasked;
+        this.cardHolderElement = document.querySelector("#card-holder");
+        this.cardSecurityCodeMasked;
+        this.cardExpirationDateMasked;
         this.cardNumberMasked;
     }
   
-    setUpLayout(type){
-        this.creditCardfills.path01.setAttribute("fill", this.colors[type][0]);
-        this.creditCardfills.path02.setAttribute("fill", this.colors[type][1]);
-        this.flagLogoElement.setAttribute("src", `cc-${type}.svg`);
+    setUpLayoutOfCardType(type){
+        const creditCardfills = {
+            path01: document.querySelector(".cc-bg svg > g g:nth-child(1) path"),
+            path02: document.querySelector(".cc-bg svg > g g:nth-child(2) path")
+        };
+        const flagLogoElement = document.querySelector(".cc-logo span:nth-child(2) img");
+
+        creditCardfills.path01.setAttribute("fill", this.colors[type][0]);
+        creditCardfills.path02.setAttribute("fill", this.colors[type][1]);
+        flagLogoElement.setAttribute("src", `cc-${type}.svg`);
     }
 
     setSecurityCodeMask(mask){
         const securityCodePattern = {mask: mask};
-        this.securityCodeMasked = Imask(this.securityCodeElement, securityCodePattern);
+        this.cardSecurityCodeMasked = Imask(this.cardSecurityCodeElement, securityCodePattern);
     }
 
     setExpirationDateMask(mask){
@@ -52,7 +58,7 @@ class CreditCard{
                 }
             }            
         }
-        this.expirationDateMasked = Imask(this.expirationDateElement, expirationDatePattern);
+        this.cardExpirationDateMasked = Imask(this.cardExpirationDateElement, expirationDatePattern);
     }
 
     setCardNumberMask(defaultMask){
@@ -76,7 +82,7 @@ class CreditCard{
             dispatch: function(appended, dynamicMasked){
                 const number = (dynamicMasked.value + appended).replace(/\D/g, "");
                 const foundMask = dynamicMasked.compiledMasks.find(item =>{
-                    return number.match(item.regex)
+                    return number.match(item.regex);
                 })
                 return foundMask;
             }
@@ -85,17 +91,44 @@ class CreditCard{
         this.cardNumberMasked = Imask(this.cardNumberElement, cardNumberPattern);
     }
 
+    registerCard(){        
+        const registerButton = document.querySelector("#register-card");
+
+        registerButton.addEventListener("click", ()=>{
+            alert("Cartão adicionado");
+        })
+    }
+
+    updateInformationsInCardView(sourceElement, destionatioElement){
+        const defaultValue = destionatioElement.textContent;
+        sourceElement.addEventListener("input", ()=>{
+            destionatioElement.innerText = sourceElement.value.length === 0 ? defaultValue : sourceElement.value;
+        });
+    }
+
+    updateMaskedInformationsInCardView(maskedElement, destionatioElement){
+        const defaultValue = destionatioElement.textContent;        
+        maskedElement.on("accept", ()=>{
+            destionatioElement.innerText = maskedElement.value.length === 0 ? defaultValue : maskedElement.value;
+            if(maskedElement.masked.currentMask){
+                this.setUpLayoutOfCardType(maskedElement.masked.currentMask.cardType);
+            }
+        });
+    }
+
 }
 
+const cardHolderView = document.querySelector(".cc-holder .value");
+const cardSecutiryCodeView = document.querySelector(".cc-security .value");
+const cardExpirationDateView = document.querySelector(".cc-expiration .value");
+const cardNumberView = document.querySelector(".cc-number");
+
 const creditCard = new CreditCard();
-creditCard.setUpLayout("mastercard");
 creditCard.setSecurityCodeMask("0000");
 creditCard.setExpirationDateMask("MM{/}YY");
 creditCard.setCardNumberMask("0000 0000 0000 0000");
-
-console.log(creditCard.cardNumberMasked.masked.currentMask.cardType + ", " + creditCard.cardNumberMasked.masked.currentMask._value);
-
-console.log(creditCard.cardNumberMasked);
-
-// Visa: /^4\d{0,15}/
-// Mastercard: /(^5[1-5]\d{0,2}|^22[2-9]\d|^2[3-7]\d{0,2})\d{0,12}/
+creditCard.registerCard();
+creditCard.updateInformationsInCardView(creditCard.cardHolderElement, cardHolderView);
+creditCard.updateMaskedInformationsInCardView(creditCard.cardSecurityCodeMasked, cardSecutiryCodeView);
+creditCard.updateMaskedInformationsInCardView(creditCard.cardExpirationDateMasked, cardExpirationDateView);
+creditCard.updateMaskedInformationsInCardView(creditCard.cardNumberMasked, cardNumberView);
